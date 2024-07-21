@@ -1,0 +1,15 @@
+[Unit]
+Description=relay
+After=network.target
+
+[Service]
+Type=simple
+StandardOutput=syslog
+StandardError=syslog
+SyslogIdentifier=relay
+
+ExecStart=/usr/bin/env socat UDP4-LISTEN:45633,fork UDP6:[2a00:23c5:5313:cf01::1449]:45733
+Restart=always
+
+[Install]
+WantedBy=multi-user.target

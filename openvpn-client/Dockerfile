@@ -2,10 +2,14 @@ FROM ubuntu
 RUN apt update
 RUN apt install -y openvpn
 
-COPY certificates/pki/ca.crt /etc/openvpn/client/ca.crt
+RUN yes| unminimize
+RUN apt install -y iproute2 net-tools tcpdump curl
+
+COPY certificates/pki/ca.crt /etc/openvpn/ca.crt
+COPY certificates/ta.key /etc/openvpn/ta.key
+
 COPY certificates/pki/issued/client.crt /etc/openvpn/client/client.crt
 COPY certificates/pki/private/client.key /etc/openvpn/client/client.key
-COPY certificates/ta.key /etc/openvpn/client/ta.key
 
 COPY openvpn-client/client.conf /etc/openvpn/client.conf
 

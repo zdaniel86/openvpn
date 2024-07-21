@@ -1,29 +1,39 @@
-OPENVPN_IMAGE = openvpn-server
+OPENVPN_SERVER_IMAGE = openvpn-server
+OPENVPN_CLIENT_IMAGE = openvpn-client
 EASYRSA_IMAGE = easyrsa
 
-.PHONY: openvpn_server
-openvpn_server: build_openvpn
-	docker run --privileged --cap-add=NET_ADMIN -d -p 45733:1194/udp --name openvpn-server $(OPENVPN_IMAGE)
+.PHONY: start-openvpn-server
+start-openvpn-server: openvpn-server
+	mkdir -p shared
+	docker run -v ./shared:/mnt/shared --privileged --cap-add=NET_ADMIN -d -p 45733:1194/udp --name openvpn-server $(OPENVPN_SERVER_IMAGE)
 
-.PHONY: openvpn_client
-openvpn_client: build_openvpn_client
+.PHONY: start-openvpn-client
+start-openvpn-client: openvpn-client
 	docker run --privileged --cap-add=NET_ADMIN -d openvpn-client
 
-extract_ta_key: build_openvpn
-	docker run -v ./certificates:/certificates $(OPENVPN_IMAGE) "cp /etc/openvpn/server/ta.key /certificates/"
+.PHONY: openvpn-client
+openvpn-client:
+	docker build -t $(OPENVPN_CLIENT_IMAGE) -f openvpn-client/Dockerfile .
 
-.PHONY: build_openvpn_client
-build_openvpn_client:
-	docker build -t openvpn-client -f openvpn-client/Dockerfile .
+.PHONY: openvpn-server
+openvpn-server:
+	docker build -t $(OPENVPN_SERVER_IMAGE) -f openvpn-server/Dockerfile .
 
-.PHONY: build_openvpn
-build_openvpn:
-	docker build -t $(OPENVPN_IMAGE) -f openvpn-server/Dockerfile .
+certificates: easyrsa
+	mkdir -p certificates
+	docker run -v ./certificates:/mnt/certificates $(EASYRSA_IMAGE) make-certificates.sh
+	docker run -v ./certificates:/mnt/certificates $(EASYRSA_IMAGE) "make-client.sh client"
 
-.PHONY: build_easyrsa
-build_easyrsa:
+.PHONY: easyrsa
+easyrsa:
 	docker build -t $(EASYRSA_IMAGE) -f easyrsa/Dockerfile .
 
-.PHONY: certificates
-certificates: build_easyrsa
-	docker run -v ./certificates:/certificates $(EASYRSA_IMAGE) ./make-certificates.sh
+.PHONY: clean
+clean:
+	rm -rf certificates
+
+.PHONY: gc
+gc:
+	docker container prune
+	docker image prune
+	docker volume prune
